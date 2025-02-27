@@ -27,7 +27,10 @@
         "Clean",
         "Compile",
         "ConfigureNuget",
-        "Restore"
+        "IntegrationTests",
+        "Publish",
+        "Restore",
+        "UnitTests"
       ]
     },
     "Verbosity": {
@@ -110,6 +113,12 @@
         "ArtifactoryUsername": {
           "type": "string"
         },
+        "AssemblySemFileVer": {
+          "type": "string"
+        },
+        "AssemblySemVer": {
+          "type": "string"
+        },
         "Configuration": {
           "type": "string",
           "description": "Configuration to build - Default is 'Debug' (local) or 'Release' (server)",
@@ -117,6 +126,9 @@
             "Debug",
             "Release"
           ]
+        },
+        "InformationalVersion": {
+          "type": "string"
         },
         "Solution": {
           "type": "string",

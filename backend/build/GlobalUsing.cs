@@ -5,3 +5,7 @@ global using Nuke.Common.Tooling;
 global using Nuke.Common.ProjectModel;
 global using Nuke.Common.Git;
 global using Nuke.Common.IO;
+global using System.Collections.Generic;
+global using Nuke.Common.Tools.Coverlet;
+global using System;
+global using System.Linq;
