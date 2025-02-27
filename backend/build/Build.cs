@@ -1,5 +1,8 @@
+
 class Build : NukeBuild
 {
+    const string BuildContainerImage = "solution-template-build";
+
     [Parameter] readonly string ArtifactoryUsername;
     [Parameter] readonly string ArtifactoryPassword;
     [Parameter] readonly string ArtifactoryNugetSourceUrl;
@@ -16,6 +19,8 @@ class Build : NukeBuild
     AbsolutePath TestResultsDirectory => ArtifactsDirectory / "test-results";
     AbsolutePath IntegrationTestsResultDirectory => ArtifactsDirectory / "integration-test-results";
     AbsolutePath CoverageReportsDirectory => ArtifactsDirectory / "coverage";
+    AbsolutePath Dockerfile => RootDirectory / "backend/build.dockerfile";
+    AbsolutePath DockerBuildContextPath => RootDirectory / "backend";
 
     public static int Main() => Execute<Build>(x => x.Compile);
 
@@ -127,11 +132,22 @@ class Build : NukeBuild
             DotNetPublish(settings => settings.SetProject(Solution)
                 .SetConfiguration(Configuration)
                 .SetNoBuild(SucceededTargets.Contains(Compile))
+                .SetRuntime("linux-x64")
                 .SetOutput(BinaryArtifactsDirectory)
                 .SetVerbosity(DotNetVerbosity.quiet)
                 .SetRepositoryUrl(GitRepository.HttpsUrl)
                 .SetAssemblyVersion(AssemblySemVer)
                 .SetFileVersion(AssemblySemFileVer)
                 .SetInformationalVersion(InformationalVersion));
+        });
+
+    Target BuildContainer => d => d
+        .Executes(() =>
+        {
+            Console.WriteLine($"@@@@DockerBuildContextPath: {DockerBuildContextPath}");
+            DockerTasks.DockerBuild(settings => settings
+                .SetFile("build.dockerfile")
+                .SetTag(BuildContainerImage)
+                .SetPath(DockerBuildContextPath));
         });
 }

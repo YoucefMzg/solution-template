@@ -7,5 +7,6 @@ global using Nuke.Common.Git;
 global using Nuke.Common.IO;
 global using System.Collections.Generic;
 global using Nuke.Common.Tools.Coverlet;
+global using Nuke.Common.Tools.Docker;
 global using System;
-global using System.Linq;
+
