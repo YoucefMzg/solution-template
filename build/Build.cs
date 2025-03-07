@@ -1,8 +1,5 @@
-
 class Build : NukeBuild
 {
-    const string BuildContainerImage = "solution-template-build";
-
     [Parameter] readonly string ArtifactoryUsername;
     [Parameter] readonly string ArtifactoryPassword;
     [Parameter] readonly string ArtifactoryNugetSourceUrl;
@@ -14,15 +11,16 @@ class Build : NukeBuild
     [GitRepository] [Required] readonly GitRepository GitRepository;
     [Solution] readonly Solution Solution;
 
+    const string ProjectName = "Api";
+    Project Project => Solution.GetAllProjects("*").Single(p => ProjectName.Equals(p.Name, StringComparison.Ordinal));
+
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
     AbsolutePath BinaryArtifactsDirectory => ArtifactsDirectory / "bin";
     AbsolutePath TestResultsDirectory => ArtifactsDirectory / "test-results";
     AbsolutePath IntegrationTestsResultDirectory => ArtifactsDirectory / "integration-test-results";
     AbsolutePath CoverageReportsDirectory => ArtifactsDirectory / "coverage";
-    AbsolutePath Dockerfile => RootDirectory / "backend/build.dockerfile";
-    AbsolutePath DockerBuildContextPath => RootDirectory / "backend";
 
-    public static int Main() => Execute<Build>(x => x.Compile);
+    public static int Main() => Execute<Build>(x => x.Publish);
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
@@ -57,7 +55,6 @@ class Build : NukeBuild
         });
 
     Target Clean => d => d
-        // .OnlyWhenStatic(() => !IsLocalBuild)
         .Executes(() =>
         {
             // TODO: setup serilog properly
@@ -68,9 +65,11 @@ class Build : NukeBuild
             CoverageReportsDirectory.CreateOrCleanDirectory();
 
             DotNetClean(settings => settings.SetProject(Solution)
+                .SetConfiguration(Configuration)
                 .SetVerbosity(DotNetVerbosity.quiet));
-            // Serilog.Log.Information($"Cleaning bin and obj directories");
+
             // Solution.Directory.GlobDirectories("*/bin", "*/obj").DeleteDirectories();
+            // Serilog.Log.Information($"Cleaning bin and obj directories");
         });
 
     Target Restore => d => d
@@ -89,14 +88,14 @@ class Build : NukeBuild
         {
             DotNetBuild(configurator => configurator
                 .SetConfiguration(Configuration)
-                .SetNoRestore(SucceededTargets.Contains(Restore))
+                .SetNoRestore(true)
                 .SetVerbosity(DotNetVerbosity.quiet)
                 .SetRepositoryUrl(GitRepository.HttpsUrl)
             );
         });
 
     Target UnitTests => d => d
-        .After(Compile)
+        .DependsOn(Compile)
         .Executes(() =>
         {
             DotNetTest(settings => settings.SetConfiguration(Configuration)
@@ -111,7 +110,7 @@ class Build : NukeBuild
         });
 
     Target IntegrationTests => d => d
-        .After(Compile)
+        .DependsOn(Compile)
         .Executes(() =>
         {
             DotNetTest(settings => settings.SetConfiguration(Configuration)
@@ -126,28 +125,19 @@ class Build : NukeBuild
         });
 
     Target Publish => d => d
-        .After(Compile)
+        .DependsOn(Compile)
         .Executes(() =>
         {
-            DotNetPublish(settings => settings.SetProject(Solution)
+            DotNetPublish(settings => settings.SetProject(Project)
                 .SetConfiguration(Configuration)
-                .SetNoBuild(SucceededTargets.Contains(Compile))
-                .SetRuntime("linux-x64")
+                // .SetRuntime("linux-x64")  // Removing this for now as it's causing issues with the publish: error : Manifest file not found
+                .SetNoBuild(true)
                 .SetOutput(BinaryArtifactsDirectory)
+                // .EnablePublishSingleFile()  // Removing this for now as it's causing issues with the publish: error : Manifest file not found
                 .SetVerbosity(DotNetVerbosity.quiet)
                 .SetRepositoryUrl(GitRepository.HttpsUrl)
                 .SetAssemblyVersion(AssemblySemVer)
                 .SetFileVersion(AssemblySemFileVer)
                 .SetInformationalVersion(InformationalVersion));
-        });
-
-    Target BuildContainer => d => d
-        .Executes(() =>
-        {
-            Console.WriteLine($"@@@@DockerBuildContextPath: {DockerBuildContextPath}");
-            DockerTasks.DockerBuild(settings => settings
-                .SetFile("build.dockerfile")
-                .SetTag(BuildContainerImage)
-                .SetPath(DockerBuildContextPath));
         });
 }
