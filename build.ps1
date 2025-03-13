@@ -32,7 +32,7 @@ docker build `
  --tag $tag.
 
 # Build inside build environment
-docker run -it --rm --name $tag `
+docker run --rm --name $tag `
  -v /var/run/docker.sock:/var/run/docker.sock `
  -v $PWD/artifacts:/repo/artifacts `
  -v $PWD/temp:/repo/temp `
