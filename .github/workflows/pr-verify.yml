@@ -18,6 +18,5 @@ jobs:
           fetch-depth: 0
           
       - name: Build and Test
-        run: ./build.ps1
+        run: build.ps1
         shell: pwsh
-        working-directory: .
