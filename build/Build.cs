@@ -130,10 +130,10 @@ class Build : NukeBuild
         {
             DotNetPublish(settings => settings.SetProject(Project)
                 .SetConfiguration(Configuration)
-                // .SetRuntime("linux-x64")  // Removing this for now as it's causing issues with the publish: error : Manifest file not found
+                // .SetRuntime("linux-x64")  // Removing this for now as it's causing issues with the publishing: error : Manifest file not found
                 .SetNoBuild(true)
                 .SetOutput(BinaryArtifactsDirectory)
-                // .EnablePublishSingleFile()  // Removing this for now as it's causing issues with the publish: error : Manifest file not found
+                // .EnablePublishSingleFile()  // Removing this for now as it's causing issues with the publishing: error : Manifest file not found
                 .SetVerbosity(DotNetVerbosity.quiet)
                 .SetRepositoryUrl(GitRepository.HttpsUrl)
                 .SetAssemblyVersion(AssemblySemVer)

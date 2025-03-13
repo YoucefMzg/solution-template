@@ -39,5 +39,5 @@ docker run -it --rm --name $tag `
  --network host `
  -e NUGET_PACKAGES=/repo/temp/nuget-packages `
  $tag `
- dotnet run --project build/Build.csproj -c Release -- $args
+ dotnet run --project build/Build.csproj -c Release -nologo -- $args
  
