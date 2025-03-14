@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine
 
-ARG GitHubToken
-ENV GitHubToken=${GitHubToken}
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 ARG GITHUB_RUN_NUMBER
 ENV GITHUB_RUN_NUMBER=${GITHUB_RUN_NUMBER}
 
@@ -13,7 +13,7 @@ RUN apk update \
     
 ENV PATH="$PATH:/root/.dotnet/tools:/bin"
 
-RUN echo "${GitHubToken}" | docker login ghcr.io -u ci --password-stdin
+RUN echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ci --password-stdin
 
 COPY . ./repo/
 

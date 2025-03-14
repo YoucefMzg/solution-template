@@ -9,6 +9,8 @@ jobs:
   build:
     name: PR Verify
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
     timeout-minutes: 15
 
     steps:

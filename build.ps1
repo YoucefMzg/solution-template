@@ -26,12 +26,12 @@ if ($args[0] -eq "local")
 
 Show-Message "Building in docker (use './build.ps1 local' to build without using docker)"
 
-$GitHubToken = $Env:GitHubToken
+$GITHUB_TOKEN = $Env:GITHUB_TOKEN
 $GITHUB_RUN_NUMBER = $Env:GITHUB_RUN_NUMBER
 
-if ($null -eq $GitHubToken -or $GitHubToken -eq "")
+if ($null -eq $GITHUB_TOKEN -or $GITHUB_TOKEN -eq "")
 {
-    Write-Error "GitHubToken environment variable empty or missing."
+    Write-Error "GITHUB_TOKEN environment variable empty or missing."
 }
 
 if ($null -eq $GITHUB_RUN_NUMBER -or $GITHUB_RUN_NUMBER -eq "")
@@ -43,7 +43,7 @@ $tag = "solution-template-build"
 
 # Build the build environment image.
 docker build `
- --build-arg GitHubToken=$GitHubToken `
+ --build-arg GITHUB_TOKEN=$GITHUB_TOKEN `
  --build-arg GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER `
  -f build.dockerfile `
  --tag $tag.
