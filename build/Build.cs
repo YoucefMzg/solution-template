@@ -1,3 +1,7 @@
+using System.IO;
+using Nuke.Common.Tools.Docker;
+using SimpleExec;
+
 class Build : NukeBuild
 {
     [Parameter] readonly string ArtifactoryUsername;
@@ -15,18 +19,24 @@ class Build : NukeBuild
     Project Project => Solution.GetAllProjects("*").Single(p => ProjectName.Equals(p.Name, StringComparison.Ordinal));
 
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
-    AbsolutePath BinaryArtifactsDirectory => ArtifactsDirectory / "bin";
+    AbsolutePath BinaryArtifactsDirectory => ArtifactsDirectory / "app/bin";
+    AbsolutePath InfraArtifactsDirectory => ArtifactsDirectory / "app/infra";
+    AbsolutePath DeployArtifactsDirectory => ArtifactsDirectory / "app/deploy";
     AbsolutePath TestResultsDirectory => ArtifactsDirectory / "test-results";
     AbsolutePath IntegrationTestsResultDirectory => ArtifactsDirectory / "integration-test-results";
     AbsolutePath CoverageReportsDirectory => ArtifactsDirectory / "coverage";
-
-    public static int Main() => Execute<Build>(x => x.Publish);
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     IEnumerable<Project> UnitTestProjects => Solution.GetAllProjects("*.Tests.Unit");
     IEnumerable<Project> IntegrationTestProjects => Solution.GetAllProjects("*.Tests.Integration");
+
+    const string GithubContainerRegistryNamespace = "ghcr.io/YoucefMzg/solution-template";
+    const string DeploymentContainerImageName = "solution-template-deployment";
+
+    readonly string DeploymentImageTag = Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER") ??
+                                         "GITHUB_RUN_NUMBER-not-available";
 
     Target ConfigureNuget => tgt => tgt
         .OnlyWhenStatic(() => !string.IsNullOrWhiteSpace(ArtifactoryNugetSourceUrl)
@@ -77,7 +87,6 @@ class Build : NukeBuild
         .DependsOn(Clean)
         .Executes(() =>
         {
-            // TODO: SetVerbosity should be a parameter
             DotNetRestore(configurator => configurator
                 .SetVerbosity(DotNetVerbosity.quiet));
         });
@@ -111,6 +120,7 @@ class Build : NukeBuild
 
     Target IntegrationTests => d => d
         .DependsOn(Compile)
+        .After(UnitTests)
         .Executes(() =>
         {
             DotNetTest(settings => settings.SetConfiguration(Configuration)
@@ -126,6 +136,7 @@ class Build : NukeBuild
 
     Target Publish => d => d
         .DependsOn(Compile)
+        .After(UnitTests, IntegrationTests)
         .Executes(() =>
         {
             DotNetPublish(settings => settings.SetProject(Project)
@@ -140,4 +151,48 @@ class Build : NukeBuild
                 .SetFileVersion(AssemblySemFileVer)
                 .SetInformationalVersion(InformationalVersion));
         });
+
+    Target PublishInfra => d => d
+        .Unlisted()
+        .After(Publish)
+        .Executes(() =>
+        {
+            // Publish Infrastructure
+            Directory.CreateDirectory(InfraArtifactsDirectory);
+        });
+
+    Target PublishDeploy => d => d
+        .Unlisted()
+        .After(PublishInfra)
+        .Executes(() =>
+        {
+            // Publish Deployment
+            Directory.CreateDirectory(DeployArtifactsDirectory);
+        });
+
+    Target BuildContainer => d => d
+        .Unlisted()
+        .After(Publish, PublishInfra, PublishDeploy)
+        .Executes(() =>
+        {
+            DockerTasks.DockerBuild(settings => settings
+                .SetFile(RootDirectory / "publish.dockerfile")
+                .SetPath(RootDirectory)
+                .SetTag(DeploymentContainerImageName));
+
+            Command.Run("docker",
+                $"tag {DeploymentContainerImageName}:latest {GithubContainerRegistryNamespace}/{DeploymentContainerImageName}:{DeploymentImageTag}");
+        });
+
+    Target PushDeploymentContainer => d => d
+        .After(BuildContainer)
+        .Executes(() =>
+        {
+            Command.Run("docker", $"push {GithubContainerRegistryNamespace}/{DeploymentContainerImageName}:{DeploymentImageTag}");
+        });
+
+    Target Default => d => d
+        .DependsOn(UnitTests, IntegrationTests, Publish, PublishInfra, PublishDeploy, BuildContainer);
+
+    public static int Main() => Execute<Build>(x => x.Default);
 }
