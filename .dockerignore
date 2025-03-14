@@ -13,5 +13,7 @@
 **/npm-debug.log
 **/secrets.dev.yaml
 **/values.dev.yaml
-**/artifacts
+# artifacts must be ignored becaue of the publish.dockerfile where we copy the artifacts. 
+#**/artifacts  
+
 **/temp

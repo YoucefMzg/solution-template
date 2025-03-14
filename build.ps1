@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-function Show-Message {
+function Show-Message
+{
     param ([string]$message)
 
     # Get current time formatted as HH:mm:ss
@@ -16,7 +17,8 @@ function Show-Message {
     Write-Host ""
 }
 
-if ($args[0] -eq "local") {
+if ($args[0] -eq "local")
+{
     Show-Message "Building Locally"
     dotnet run --project build/Build.csproj -c Release -- $args[1..($args.Count)]
     exit 0;
@@ -24,10 +26,25 @@ if ($args[0] -eq "local") {
 
 Show-Message "Building in docker (use './build.ps1 local' to build without using docker)"
 
-$tag="solution-template-build"
+$GITHUB_TOKEN = $Env:GITHUB_TOKEN
+$GITHUB_RUN_NUMBER = $Env:GITHUB_RUN_NUMBER
+
+if ($null -eq $GITHUB_TOKEN -or $GITHUB_TOKEN -eq "")
+{
+    Write-Error "GITHUB_TOKEN environment variable empty or missing."
+}
+
+if ($null -eq $GITHUB_RUN_NUMBER -or $GITHUB_RUN_NUMBER -eq "")
+{
+    Write-Warning "GITHUB_RUN_NUMBER environment variable empty or missing."
+}
+
+$tag = "solution-template-build"
 
 # Build the build environment image.
 docker build `
+ --build-arg GITHUB_TOKEN=$GITHUB_TOKEN `
+ --build-arg GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER `
  -f build.dockerfile `
  --tag $tag.
 
@@ -39,5 +56,5 @@ docker run --rm --name $tag `
  --network host `
  -e NUGET_PACKAGES=/repo/temp/nuget-packages `
  $tag `
- dotnet run --project build/Build.csproj -c Release -nologo -- $args
+ dotnet run --project build/Build.csproj -c Release -- $args
  

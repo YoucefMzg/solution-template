@@ -24,11 +24,15 @@
     "ExecutableTarget": {
       "type": "string",
       "enum": [
+        "BuildContainer",
         "Clean",
         "Compile",
         "ConfigureNuget",
+        "Default",
         "IntegrationTests",
         "Publish",
+        "PublishDeploy",
+        "PublishInfra",
         "Restore",
         "UnitTests"
       ]
